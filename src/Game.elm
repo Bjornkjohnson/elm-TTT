@@ -3,35 +3,67 @@ module Game (..) where
 import Html exposing (Html)
 import Signal
 
+import Ai exposing (..)
 import Board exposing (..)
 import DataTypes exposing (..)
 import Display exposing (..)
 import Mailbox exposing (..)
 import Debug
 
-startGame : Game
+startGame : GameState
 startGame =
   {
     board = newBoard,
+    activePlayer = X,
+    inactivePlayer = O,
     winner = Empty
   }
-updateGameBoard : Game -> Int -> Int -> Game
-updateGameBoard game row column =
-  { game | board = Board.update game.board row column Human}
 
-updateWinnerStatus : Game -> Game
-updateWinnerStatus game  =
-  {game | winner = checkWinner game.board}
+updateGameBoard : GameState -> Coords -> GameState
+updateGameBoard gameState coordSet =
+  { gameState | board = Board.update gameState coordSet }
 
-update : Action -> Game -> Game
-update action game =
+updateWinnerStatus : GameState -> GameState
+updateWinnerStatus gameState  =
+  { gameState | winner = checkWinner gameState.board }
+
+update : Action -> GameState -> GameState
+update action gameState =
   case action of
-    NoOp -> game
+    NoOp -> gameState
+    ComputerMove ->
+      let
+        nextTurnState = (setPlayerToO gameState)
+        nextMove      = (minimaxMove nextTurnState)
+      in
+        (updateGameBoard nextTurnState (fromFlatIndex nextMove)) |> updateWinnerStatus
     Move row column ->
-      updateGameBoard game row column
-        |> updateWinnerStatus
+      let
+        nextTurnState = (setPlayerToX gameState)
+      in
+        updateGameBoard nextTurnState (toCoords row column) |> updateWinnerStatus
 
-model : Signal Game
+toCoords : Int -> Int -> Coords
+toCoords row column =
+  { x = row, y = column }
+
+setPlayerToX: GameState -> GameState
+setPlayerToX lastState =
+  {  board = lastState.board,
+     activePlayer = X,
+     inactivePlayer = O,
+     winner = lastState.winner
+  }
+
+setPlayerToO: GameState -> GameState
+setPlayerToO lastState =
+  {  board = lastState.board,
+     activePlayer = O,
+     inactivePlayer = X,
+     winner = lastState.winner
+  }
+
+model : Signal GameState
 model =
   Signal.foldp update startGame actions.signal
 

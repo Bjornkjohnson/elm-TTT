@@ -3,6 +3,7 @@ module Board where
 import DataTypes exposing (..)
 import Array exposing (..)
 import Set
+
 newBoard : List (List Cell)
 newBoard =
   [ [Empty, Empty, Empty]
@@ -70,8 +71,11 @@ extractFromList list desiredIndex =
 
 setNthItem : List a -> Int  -> a  -> List a
 setNthItem list index value=
-  toList <| set index value (fromList list)
+  Array.fromList list |> set index value |> Array.toList
 
-update : List (List Cell) -> Int -> Int -> Player -> List (List Cell)
-update board row column player =
-  setNthItem board row (setNthItem (getRow board row) column (getSymbol player))
+update : GameState -> Coords -> List (List Cell)
+update gameState coords =
+  let
+    targetRow = getRow gameState.board coords.x
+  in
+    setNthItem gameState.board coords.x (setNthItem targetRow coords.y gameState.activePlayer)
